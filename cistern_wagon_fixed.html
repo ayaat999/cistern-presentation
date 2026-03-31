@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cistern Wagon — Gasoline Loading Specifications</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green: #00e5a0;
+      --blue: #0088ff;
+      --dark: #060910;
+      --panel: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.07);
+    }
+
+    body {
+      background: var(--dark);
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ── Canvas ── */
+    #three-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* ── Slides ── */
+    .slide {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .slide.active { display: flex; }
+
+    /* ══════════════════════════════
+       SLIDE 1 — Hero
+    ══════════════════════════════ */
+    #slide-1 {
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 80px;
+    }
+
+    .hero-badge {
+      font-size: 0.65rem;
+      letter-spacing: 4px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.3s forwards;
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.1;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.5s forwards;
+    }
+
+    .hero-title span { color: var(--green); }
+
+    .hero-sub {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 2px;
+      margin-top: 12px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.7s forwards;
+    }
+
+    .hero-line {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green), transparent);
+      margin: 20px auto 0;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.9s forwards;
+    }
+
+    /* ══════════════════════════════
+       SLIDE 2 — Capacity
+    ══════════════════════════════ */
+    #slide-2 { align-items: flex-end; padding: 40px; }
+
+    .spec-panel {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+      width: min(500px, 90vw);
+      opacity: 0;
+      animation: slideIn 0.7s 0.2s forwards;
+    }
+
+    .panel-label {
+      font-size: 0.6rem;
+      letter-spacing: 4px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .big-number {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      line-height: 1;
+      color: var(--green);
+    }
+
+    .big-unit {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.5);
+      margin-left: 8px;
+      font-weight: 300;
+    }
+
+    .spec-desc {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .spec-row:last-child { border-bottom: none; }
+
+    .spec-key {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+    }
+
+    .spec-val {
+      font-size: 0.85rem;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .spec-val.green { color: var(--green); }
+
+    /* ══════════════════════════════
+       SLIDE 3 — Pressure
+    ══════════════════════════════ */
+    #slide-3 { align-items: flex-start; padding: 40px; }
+
+    .pressure-card {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+      width: min(480px, 90vw);
+      opacity: 0;
+      animation: slideIn 0.7s 0.2s forwards;
+    }
+
+    .gauge-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 20px auto;
+    }
+
+    .gauge-wrap svg { width: 100%; height: 100%; }
+
+    .gauge-val {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .gauge-val .num {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--green);
+    }
+
+    .gauge-val .lbl {
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+    }
+
+    .pressure-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .tag {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      letter-spacing: 1px;
+      border: 1px solid var(--border);
+      color: rgba(255,255,255,0.5);
+    }
+
+    .tag.green {
+      background: rgba(0,229,160,0.1);
+      border-color: rgba(0,229,160,0.3);
+      color: var(--green);
+    }
+
+    /* ══════════════════════════════
+       SLIDE 4 — Safety
+    ══════════════════════════════ */
+    #slide-4 {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .safety-title {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.2s forwards;
+    }
+
+    .safety-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      width: min(900px, 90vw);
+      opacity: 0;
+      animation: fadeUp 0.7s 0.4s forwards;
+    }
+
+    .safety-card {
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.3s;
+    }
+
+    .safety-card:hover { border-color: rgba(0,229,160,0.3); }
+
+    .safety-icon {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+    }
+
+    .safety-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--green);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .safety-desc {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.5;
+    }
+
+    /* ══════════════════════════════
+       SLIDE 5 — Materials
+    ══════════════════════════════ */
+    #slide-5 { align-items: flex-end; padding: 40px; }
+
+    .mat-panel {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+      width: min(500px, 90vw);
+      opacity: 0;
+      animation: slideIn 0.7s 0.2s forwards;
+    }
+
+    .mat-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .mat-row:last-child { border-bottom: none; }
+
+    .mat-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .mat-info { flex: 1; }
+
+    .mat-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .mat-note {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.35);
+      margin-top: 2px;
+    }
+
+    .mat-bar-wrap {
+      width: 80px;
+      height: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 2px;
+    }
+
+    .mat-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s ease;
+    }
+
+    /* ══════════════════════════════
+       Navigation
+    ══════════════════════════════ */
+    .nav {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 50;
+      pointer-events: all;
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: rgba(255,255,255,0.6);
+      font-size: 1rem;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-btn:hover {
+      background: rgba(0,229,160,0.15);
+      border-color: rgba(0,229,160,0.4);
+      color: var(--green);
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      transition: all 0.3s;
+      cursor: pointer;
+      pointer-events: all;
+    }
+
+    .dot.active {
+      width: 20px;
+      border-radius: 3px;
+      background: var(--green);
+    }
+
+    /* slide counter */
+    .slide-counter {
+      position: fixed;
+      top: 24px;
+      right: 30px;
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.25);
+      z-index: 50;
+    }
+
+    /* corner marks */
+    .corner { position: fixed; width: 24px; height: 24px; opacity: 0.2; z-index: 5; }
+    .c-tl { top: 14px; left: 14px; border-top: 1px solid var(--green); border-left: 1px solid var(--green); }
+    .c-bl { bottom: 14px; left: 14px; border-bottom: 1px solid var(--green); border-left: 1px solid var(--green); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="three-canvas"></canvas>
+
+<!-- Corners -->
+<div class="corner c-tl"></div>
+<div class="corner c-bl"></div>
+<div class="slide-counter" id="counter">01 / 05</div>
+
+<!-- ════ SLIDE 1 — HERO ════ -->
+<div class="slide active" id="slide-1">
+  <div class="hero-badge">Technical Specifications</div>
+  <h1 class="hero-title">Cistern Wagon<br><span>Gasoline Loading</span></h1>
+  <p class="hero-sub">DOT-406 · Class 3 Flammable Liquid Transport</p>
+  <div class="hero-line"></div>
+</div>
+
+<!-- ════ SLIDE 2 — CAPACITY ════ -->
+<div class="slide" id="slide-2">
+  <div class="spec-panel">
+    <div class="panel-label">01 — Capacity</div>
+    <div>
+      <span class="big-number">30,000</span>
+      <span class="big-unit">– 50,000 L</span>
+    </div>
+    <p class="spec-desc">Standard gasoline cistern wagon capacity range for road transport operations.</p>
+
+    <div style="margin-top: 24px;">
+      <div class="spec-row">
+        <span class="spec-key">MINIMUM CAPACITY</span>
+        <span class="spec-val">30,000 L (7,925 gal)</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">MAXIMUM CAPACITY</span>
+        <span class="spec-val green">50,000 L (13,208 gal)</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">COMPARTMENTS</span>
+        <span class="spec-val">2 – 6 sections</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">GVWR</span>
+        <span class="spec-val">60,000 – 80,000 lbs</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">STANDARD</span>
+        <span class="spec-val green">DOT-406</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SLIDE 3 — PRESSURE ════ -->
+<div class="slide" id="slide-3">
+  <div class="pressure-card">
+    <div class="panel-label">02 — Operating Pressure</div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 100 100">
+        <!-- Background arc -->
+        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="6"/>
+        <!-- Green arc (partial) -->
+        <circle cx="50" cy="50" r="40" fill="none"
+          stroke="#00e5a0" stroke-width="6"
+          stroke-dasharray="70 181"
+          stroke-dashoffset="45"
+          stroke-linecap="round"/>
+        <!-- Tick marks -->
+        <line x1="50" y1="12" x2="50" y2="18" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" transform="rotate(0 50 50)"/>
+        <line x1="50" y1="12" x2="50" y2="18" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" transform="rotate(45 50 50)"/>
+        <line x1="50" y1="12" x2="50" y2="18" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" transform="rotate(90 50 50)"/>
+        <line x1="50" y1="12" x2="50" y2="18" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" transform="rotate(135 50 50)"/>
+        <line x1="50" y1="12" x2="50" y2="18" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" transform="rotate(180 50 50)"/>
+      </svg>
+      <div class="gauge-val">
+        <div class="num">4</div>
+        <div class="lbl">PSIG MAX</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 8px;">
+      <div class="spec-row">
+        <span class="spec-key">MAWP (DESIGN)</span>
+        <span class="spec-val green">2.65 – 4 psig</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">VAPOR RECOVERY</span>
+        <span class="spec-val">Required</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">LOADING TYPE</span>
+        <span class="spec-val">Bottom Loading</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">VACUUM LOADING</span>
+        <span class="spec-val" style="color:#ff6b6b;">Prohibited</span>
+      </div>
+    </div>
+
+    <div class="pressure-tags" style="margin-top:16px;">
+      <div class="tag green">Pressure Relief Valve</div>
+      <div class="tag green">Emergency Shutoff</div>
+      <div class="tag">Rollover Protection</div>
+      <div class="tag">Anti-Surge Baffles</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SLIDE 4 — SAFETY ════ -->
+<div class="slide" id="slide-4">
+  <h2 class="safety-title">Safety Systems <span style="color:var(--green)">Required</span> for Gasoline Loading</h2>
+  <div class="safety-grid">
+    <div class="safety-card">
+      <div class="safety-icon">⚡</div>
+      <div class="safety-name">Emergency Shutoff</div>
+      <div class="safety-desc">Driver-side front shutoff valve — automatically seals on rollover or collision impact.</div>
+    </div>
+    <div class="safety-card">
+      <div class="safety-icon">🔒</div>
+      <div class="safety-name">Manhole per Compartment</div>
+      <div class="safety-desc">Separate manhole access required for each tank compartment per DOT-406.</div>
+    </div>
+    <div class="safety-card">
+      <div class="safety-icon">💨</div>
+      <div class="safety-name">Vapor Recovery System</div>
+      <div class="safety-desc">Prevents vapor loss and controls internal pressure during loading and transit.</div>
+    </div>
+    <div class="safety-card">
+      <div class="safety-icon">🛡️</div>
+      <div class="safety-name">Rollover Protection</div>
+      <div class="safety-desc">Engineered to prevent manhole opening during rollover events — mandatory requirement.</div>
+    </div>
+    <div class="safety-card">
+      <div class="safety-icon">〰️</div>
+      <div class="safety-name">Anti-Surge Baffles</div>
+      <div class="safety-desc">Internal baffles limit liquid movement, reducing center-of-gravity shift during transit.</div>
+    </div>
+    <div class="safety-card">
+      <div class="safety-icon">🔺</div>
+      <div class="safety-name">Hazard Placards</div>
+      <div class="safety-desc">Class 3 flammable liquid placards visible from all 4 sides — regulatory requirement.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SLIDE 5 — MATERIALS ════ -->
+<div class="slide" id="slide-5">
+  <div class="mat-panel">
+    <div class="panel-label">03 — Tank Materials</div>
+    <p style="font-size:0.72rem; color:rgba(255,255,255,0.35); margin-bottom:20px;">Material selection based on fuel type, weight requirements, and corrosion resistance.</p>
+
+    <div class="mat-row">
+      <div class="mat-dot" style="background:#00e5a0;"></div>
+      <div class="mat-info">
+        <div class="mat-name">Aluminum</div>
+        <div class="mat-note">Most common · lightweight · corrosion resistant</div>
+      </div>
+      <div class="mat-bar-wrap">
+        <div class="mat-bar" style="width:90%; background:#00e5a0;"></div>
+      </div>
+    </div>
+
+    <div class="mat-row">
+      <div class="mat-dot" style="background:#0088ff;"></div>
+      <div class="mat-info">
+        <div class="mat-name">Carbon Steel</div>
+        <div class="mat-note">High strength · used for dense or corrosive fuels</div>
+      </div>
+      <div class="mat-bar-wrap">
+        <div class="mat-bar" style="width:65%; background:#0088ff;"></div>
+      </div>
+    </div>
+
+    <div class="mat-row">
+      <div class="mat-dot" style="background:#a78bfa;"></div>
+      <div class="mat-info">
+        <div class="mat-name">Stainless Steel</div>
+        <div class="mat-note">Specialized fuels · high reactive resistance</div>
+      </div>
+      <div class="mat-bar-wrap">
+        <div class="mat-bar" style="width:40%; background:#a78bfa;"></div>
+      </div>
+    </div>
+
+    <div class="mat-row">
+      <div class="mat-dot" style="background:#fb923c;"></div>
+      <div class="mat-info">
+        <div class="mat-name">FRP (Fiber-Reinforced Plastic)</div>
+        <div class="mat-note">Chemical resistance · lightweight alternative</div>
+      </div>
+      <div class="mat-bar-wrap">
+        <div class="mat-bar" style="width:25%; background:#fb923c;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+      <div class="spec-row">
+        <span class="spec-key">GASOLINE STANDARD</span>
+        <span class="spec-val green">Aluminum / Carbon Steel</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">CROSS-SECTION</span>
+        <span class="spec-val">Oval / Elliptical</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)">‹</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">›</button>
+</div>
+
+<!-- Three.js -->
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x060910);
+scene.fog = new THREE.FogExp2(0x060910, 0.012);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(10, 5, 16);
+camera.lookAt(0, 1, 0);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(12, 20, 10);
+sun.castShadow = true;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x00e5a0, 0.3);
+fill.position.set(-10, 4, -8);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0x0044ff, 0.2);
+rim.position.set(0, -4, -15);
+scene.add(rim);
+
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(80, 80),
+  new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.9 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const grid = new THREE.GridHelper(60, 60, 0x111a26, 0x111a26);
+grid.material.opacity = 0.35;
+grid.material.transparent = true;
+scene.add(grid);
+
+// Particles
+const particleCount = 500;
+const positions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  positions[i * 3]     = (Math.random() - 0.5) * 60;
+  positions[i * 3 + 1] = Math.random() * 20;
+  positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+const particles = new THREE.Points(pGeo,
+  new THREE.PointsMaterial({ color: 0x00e5a0, size: 0.06, transparent: true, opacity: 0.4 })
+);
+scene.add(particles);
+
+// Load GLB
+let model = null;
+async function loadModel() {
+  try {
+    const { GLTFLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js');
+    const loader = new GLTFLoader();
+    loader.load('https://cdn.jsdelivr.net/gh/ayaat999/cistern-presentation@main/cistern_wagon.glb', gltf => {
+      model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 7 / maxDim;
+      model.scale.setScalar(scale);
+      model.position.sub(center.multiplyScalar(scale));
+      model.position.y += size.y * scale * 0.5;
+      model.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+      scene.add(model);
+      camera.position.set(maxDim * scale * 1.4, maxDim * scale * 0.7, maxDim * scale * 2);
+      camera.lookAt(0, size.y * scale * 0.3, 0);
+    });
+  } catch(e) { console.warn('GLB not found — showing scene without model'); }
+}
+loadModel();
+
+// Orbit state
+let theta = 0.5, phi = 1.1, radius = 18;
+let isDrag = false, prevX = 0, prevY = 0;
+const tgt = new THREE.Vector3(0, 1.5, 0);
+
+function updateCam() {
+  camera.position.set(
+    tgt.x + radius * Math.sin(phi) * Math.sin(theta),
+    tgt.y + radius * Math.cos(phi),
+    tgt.z + radius * Math.sin(phi) * Math.cos(theta)
+  );
+  camera.lookAt(tgt);
+}
+updateCam();
+
+canvas.addEventListener('mousedown', e => { isDrag = true; prevX = e.clientX; prevY = e.clientY; });
+window.addEventListener('mouseup', () => isDrag = false);
+window.addEventListener('mousemove', e => {
+  if (!isDrag) return;
+  theta -= (e.clientX - prevX) * 0.005;
+  phi = Math.max(0.2, Math.min(Math.PI - 0.2, phi + (e.clientY - prevY) * 0.005));
+  prevX = e.clientX; prevY = e.clientY;
+  updateCam();
+});
+canvas.addEventListener('wheel', e => {
+  radius = Math.max(4, Math.min(40, radius + e.deltaY * 0.02));
+  updateCam();
+});
+
+// Animate
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  if (model && !isDrag) { theta += 0.003; updateCam(); }
+  particles.rotation.y = t * 0.02;
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+
+<!-- Slide Logic -->
+<script>
+  const total = 5;
+  let current = 1;
+
+  // Build dots
+  const dotsEl = document.getElementById('dots');
+  for (let i = 1; i <= total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 1 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    document.getElementById('slide-' + current).classList.remove('active');
+    current = Math.max(1, Math.min(total, n));
+    const s = document.getElementById('slide-' + current);
+    s.classList.add('active');
+    // restart animations
+    s.querySelectorAll('[style*="animation"], .hero-badge, .hero-title, .hero-sub, .hero-line, .spec-panel, .pressure-card, .safety-title, .safety-grid, .mat-panel')
+      .forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
+
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i + 1 === current));
+    document.getElementById('counter').textContent =
+      String(current).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+  }
+
+  window.changeSlide = (dir) => goTo(current + dir);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') changeSlide(-1);
+  });
+</script>
+</body>
+</html>
